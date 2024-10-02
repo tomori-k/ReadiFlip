@@ -1,18 +1,185 @@
 ﻿using System.Buffers.Binary;
+using System.Numerics;
 
 namespace ReadiFlip.Edax;
+
+// https://qiita.com/tanaka-a/items/6d6725d5866ebe85fb0b
+
+public enum Square
+{
+    A1, B1, C1, D1, E1, F1, G1, H1,
+    A2, B2, C2, D2, E2, F2, G2, H2,
+    A3, B3, C3, D3, E3, F3, G3, H3,
+    A4, B4, C4, D4, E4, F4, G4, H4,
+    A5, B5, C5, D5, E5, F5, G5, H5,
+    A6, B6, C6, D6, E6, F6, G6, H6,
+    A7, B7, C7, D7, E7, F7, G7, H7,
+    A8, B8, C8, D8, E8, F8, G8, H8,
+    PASS, NOMOVE
+};
+
+public enum Color
+{
+    BLACK = 0,
+    WHITE,
+    EMPTY,
+    OFF_SIDE
+};
+
+public record Board(ulong Player, ulong Opponent)
+{
+    public Board Inv => new Board(Opponent, Player);
+
+    public Square this[Square x]
+    {
+        get
+        {
+            ulong b = 1UL << (int)x;
+            return (Square)(Convert.ToInt32((Player & b) == 0) * 2 - Convert.ToInt32((Opponent & b) != 0));
+        }
+    }
+}
 
 // https://github.com/abulmo/edax-reversi/blob/master/src/eval.c
 
 public class Eval
 {
-    public const int NUM_FEATURE = 47;
+    public const int NUM_FEATURES = 47;
     public const int NUM_PLY = 54;
+    public const int SCORE_MIN = -64;
+    public const int SCORE_MAX = 64;
 
     readonly ushort[] feature = new ushort[48];
-    readonly int numEmpties;
-    readonly uint parity;
+    int numEmpties;
+    //readonly uint parity;
+
+    /** array to convert features into coordinates */
+    static readonly Square[][] EVAL_F2X = [
+        [Square.A1, Square.B1, Square.A2, Square.B2, Square.C1, Square.A3, Square.C2, Square.B3, Square.C3],
+        [Square.H1, Square.G1, Square.H2, Square.G2, Square.F1, Square.H3, Square.F2, Square.G3, Square.F3],
+        [Square.A8, Square.A7, Square.B8, Square.B7, Square.A6, Square.C8, Square.B6, Square.C7, Square.C6],
+        [Square.H8, Square.H7, Square.G8, Square.G7, Square.H6, Square.F8, Square.G6, Square.F7, Square.F6],
+
+        [Square.A5, Square.A4, Square.A3, Square.A2, Square.A1, Square.B2, Square.B1, Square.C1, Square.D1, Square.E1],
+        [Square.H5, Square.H4, Square.H3, Square.H2, Square.H1, Square.G2, Square.G1, Square.F1, Square.E1, Square.D1],
+        [Square.A4, Square.A5, Square.A6, Square.A7, Square.A8, Square.B7, Square.B8, Square.C8, Square.D8, Square.E8],
+        [Square.H4, Square.H5, Square.H6, Square.H7, Square.H8, Square.G7, Square.G8, Square.F8, Square.E8, Square.D8],
+
+        [Square.B2, Square.A1, Square.B1, Square.C1, Square.D1, Square.E1, Square.F1, Square.G1, Square.H1, Square.G2],
+        [Square.B7, Square.A8, Square.B8, Square.C8, Square.D8, Square.E8, Square.F8, Square.G8, Square.H8, Square.G7],
+        [Square.B2, Square.A1, Square.A2, Square.A3, Square.A4, Square.A5, Square.A6, Square.A7, Square.A8, Square.B7],
+        [Square.G2, Square.H1, Square.H2, Square.H3, Square.H4, Square.H5, Square.H6, Square.H7, Square.H8, Square.G7],
+
+        [Square.A1, Square.C1, Square.D1, Square.C2, Square.D2, Square.E2, Square.F2, Square.E1, Square.F1, Square.H1],
+        [Square.A8, Square.C8, Square.D8, Square.C7, Square.D7, Square.E7, Square.F7, Square.E8, Square.F8, Square.H8],
+        [Square.A1, Square.A3, Square.A4, Square.B3, Square.B4, Square.B5, Square.B6, Square.A5, Square.A6, Square.A8],
+        [Square.H1, Square.H3, Square.H4, Square.G3, Square.G4, Square.G5, Square.G6, Square.H5, Square.H6, Square.H8],
+
+        [Square.A2, Square.B2, Square.C2, Square.D2, Square.E2, Square.F2, Square.G2, Square.H2],
+        [Square.A7, Square.B7, Square.C7, Square.D7, Square.E7, Square.F7, Square.G7, Square.H7],
+        [Square.B1, Square.B2, Square.B3, Square.B4, Square.B5, Square.B6, Square.B7, Square.B8],
+        [Square.G1, Square.G2, Square.G3, Square.G4, Square.G5, Square.G6, Square.G7, Square.G8],
+
+        [Square.A3, Square.B3, Square.C3, Square.D3, Square.E3, Square.F3, Square.G3, Square.H3],
+        [Square.A6, Square.B6, Square.C6, Square.D6, Square.E6, Square.F6, Square.G6, Square.H6],
+        [Square.C1, Square.C2, Square.C3, Square.C4, Square.C5, Square.C6, Square.C7, Square.C8],
+        [Square.F1, Square.F2, Square.F3, Square.F4, Square.F5, Square.F6, Square.F7, Square.F8],
+
+        [Square.A4, Square.B4, Square.C4, Square.D4, Square.E4, Square.F4, Square.G4, Square.H4],
+        [Square.A5, Square.B5, Square.C5, Square.D5, Square.E5, Square.F5, Square.G5, Square.H5],
+        [Square.D1, Square.D2, Square.D3, Square.D4, Square.D5, Square.D6, Square.D7, Square.D8],
+        [Square.E1, Square.E2, Square.E3, Square.E4, Square.E5, Square.E6, Square.E7, Square.E8],
+
+        [Square.A1, Square.B2, Square.C3, Square.D4, Square.E5, Square.F6, Square.G7, Square.H8],
+        [Square.A8, Square.B7, Square.C6, Square.D5, Square.E4, Square.F3, Square.G2, Square.H1],
+
+        [Square.B1, Square.C2, Square.D3, Square.E4, Square.F5, Square.G6, Square.H7],
+        [Square.H2, Square.G3, Square.F4, Square.E5, Square.D6, Square.C7, Square.B8],
+        [Square.A2, Square.B3, Square.C4, Square.D5, Square.E6, Square.F7, Square.G8],
+        [Square.G1, Square.F2, Square.E3, Square.D4, Square.C5, Square.B6, Square.A7],
+
+        [Square.C1, Square.D2, Square.E3, Square.F4, Square.G5, Square.H6],
+        [Square.A3, Square.B4, Square.C5, Square.D6, Square.E7, Square.F8],
+        [Square.F1, Square.E2, Square.D3, Square.C4, Square.B5, Square.A6],
+        [Square.H3, Square.G4, Square.F5, Square.E6, Square.D7, Square.C8],
+
+        [Square.D1, Square.E2, Square.F3, Square.G4, Square.H5],
+        [Square.A4, Square.B5, Square.C6, Square.D7, Square.E8],
+        [Square.E1, Square.D2, Square.C3, Square.B4, Square.A5],
+        [Square.H4, Square.G5, Square.F6, Square.E7, Square.D8],
+
+        [Square.D1, Square.C2, Square.B3, Square.A4],
+        [Square.A5, Square.B6, Square.C7, Square.D8],
+        [Square.E1, Square.F2, Square.G3, Square.H4],
+        [Square.H5, Square.G6, Square.F7, Square.E8],
+
+        [Square.NOMOVE]
+    ];
+
+    static readonly ushort[] EVAL_OFFSET = [
+        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+        0,     0,     0,     0,  6561,  6561,  6561,  6561, 13122, 13122, 13122, 13122, 19683, 19683,     0,     0,
+        0,     0,  2187,  2187,  2187,  2187,  2916,  2916,  2916,  2916,  3159,  3159,  3159,  3159,     0,     0
+    ];
+
+
+    public void SetFeaturesFrom(Board board)
+    {
+        numEmpties = 64 - BitOperations.PopCount(board.Player ^ board.Opponent);
+        var b = (numEmpties & 1) != 0 ? board.Inv : board;
+
+        for (var i = 0; i < NUM_FEATURES; ++i)
+        {
+            ushort x = 0;
+            for (var j = 0; j < EVAL_F2X[i].Length; j++)
+            {
+                x = (ushort)(x * 3 + (int)b[EVAL_F2X[i][j]]);
+            }
+            feature[i] = (ushort)(x + EVAL_OFFSET[i]);
+        }
+    }
+
+    public static int AccumulateEval(Eval eval, EvalWeight[] weights, int ply)
+    {
+        if (ply >= NUM_PLY)
+            ply = NUM_PLY - 2 + (ply & 1);
+        ply -= 2;
+        if (ply < 0)
+            ply &= 1;
+
+        var w = weights[ply];
+        ReadOnlySpan<ushort> f = eval.feature.AsSpan();
+
+        var sum = w.C9[f[0]] + w.C9[f[1]] + w.C9[f[2]] + w.C9[f[3]]
+          + w.C10[f[4]] + w.C10[f[5]] + w.C10[f[6]] + w.C10[f[7]]
+          + w.S100[f[8]] + w.S100[f[9]] + w.S100[f[10]] + w.S100[f[11]]
+          + w.S101[f[12]] + w.S101[f[13]] + w.S101[f[14]] + w.S101[f[15]]
+          + w.S8x4[f[16]] + w.S8x4[f[17]] + w.S8x4[f[18]] + w.S8x4[f[19]]
+          + w.S8x4[f[20]] + w.S8x4[f[21]] + w.S8x4[f[22]] + w.S8x4[f[23]]
+          + w.S8x4[f[24]] + w.S8x4[f[25]] + w.S8x4[f[26]] + w.S8x4[f[27]]
+          + w.S7654[f[30]] + w.S7654[f[31]] + w.S7654[f[32]] + w.S7654[f[33]]
+          + w.S7654[f[34]] + w.S7654[f[35]] + w.S7654[f[36]] + w.S7654[f[37]]
+          + w.S7654[f[38]] + w.S7654[f[39]] + w.S7654[f[40]] + w.S7654[f[41]]
+          + w.S7654[f[42]] + w.S7654[f[43]] + w.S7654[f[44]] + w.S7654[f[45]];
+
+        return sum + w.S8x4[f[28]] + w.S8x4[f[29]] + w.S0;
+    }
+
+    public static int Evaluate(Eval eval, EvalWeight[] weights)
+    {
+        var score = AccumulateEval(eval, weights, 60 - eval.numEmpties);
+
+        if (score > 0) score += 64; else score -= 64;
+        score /= 128;
+
+        if (score < SCORE_MIN + 1) score = SCORE_MIN + 1;
+        if (score > SCORE_MAX - 1) score = SCORE_MAX - 1;
+
+        return score;
+    }
 }
+
+
 
 public record EvalHeader(
     uint Edax,
@@ -154,6 +321,19 @@ public static class Edax
         var weights = ReadWeights(reader, header.Edax);
 
         Console.WriteLine("Read eval!!");
+
+        var board = new Board(
+            //0x0000000810000000,
+            //0x0000001008000000
+            0x0000003c1c040000,
+            0x0000080020080000
+        );
+        var eval = new Eval();
+        eval.SetFeaturesFrom(board);
+
+        var score = Eval.Evaluate(eval, weights);
+
+        Console.WriteLine($"Score: {score}");
     }
 
     static EvalHeader ReadHeader(BinaryReader reader)

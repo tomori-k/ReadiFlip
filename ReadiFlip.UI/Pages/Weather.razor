@@ -43,9 +43,9 @@ else
     {
         forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("sample-data/weather.json");
 
-        using var stream = await Http.GetStreamAsync("data/eval.dat.gz");
-        using var gzipStream = new System.IO.Compression.GZipStream(stream, System.IO.Compression.CompressionMode.Decompress);
-        using var reader = new BinaryReader(gzipStream); // very slow
+        using var stream = await Http.GetStreamAsync("data/eval.dat");
+        // using var gzipStream = new System.IO.Compression.GZipStream(stream, System.IO.Compression.CompressionMode.Decompress);
+        using var reader = new BinaryReader(stream); // very slow
 
         Edax.Edax.ReadEval(reader);
     }
