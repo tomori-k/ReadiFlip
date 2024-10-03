@@ -47,7 +47,11 @@ else
         // using var gzipStream = new System.IO.Compression.GZipStream(stream, System.IO.Compression.CompressionMode.Decompress);
         using var reader = new BinaryReader(stream); // very slow
 
-        Edax.Edax.ReadEval(reader);
+        var eval = Edax.EdaxEval.ReadEval(reader);
+
+        Console.WriteLine($"{eval.Evaluate(Reversi.Board.Init)}"); // -4
+        Console.WriteLine($"{eval.Evaluate(new Reversi.Board(0x0000003c1c040000, 0x0000080020080000))}"); // -1
+        Console.WriteLine($"{eval.Evaluate(new Reversi.Board(0x0000080c1cec3830, 0x1c3c3670e0100004))}"); // 2 (228)
     }
 
     public class WeatherForecast

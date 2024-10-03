@@ -1,57 +1,14 @@
-﻿using System.Buffers.Binary;
-using System.Numerics;
+﻿using ReadiFlip.Reversi;
+using System.Buffers.Binary;
 
 namespace ReadiFlip.Edax;
 
 // https://qiita.com/tanaka-a/items/6d6725d5866ebe85fb0b
-
-public enum Square
-{
-    A1, B1, C1, D1, E1, F1, G1, H1,
-    A2, B2, C2, D2, E2, F2, G2, H2,
-    A3, B3, C3, D3, E3, F3, G3, H3,
-    A4, B4, C4, D4, E4, F4, G4, H4,
-    A5, B5, C5, D5, E5, F5, G5, H5,
-    A6, B6, C6, D6, E6, F6, G6, H6,
-    A7, B7, C7, D7, E7, F7, G7, H7,
-    A8, B8, C8, D8, E8, F8, G8, H8,
-    PASS, NOMOVE
-};
-
-public enum Color
-{
-    BLACK = 0,
-    WHITE,
-    EMPTY,
-    OFF_SIDE
-};
-
-public record Board(ulong Player, ulong Opponent)
-{
-    public Board Inv => new Board(Opponent, Player);
-
-    public Square this[Square x]
-    {
-        get
-        {
-            ulong b = 1UL << (int)x;
-            return (Square)(Convert.ToInt32((Player & b) == 0) * 2 - Convert.ToInt32((Opponent & b) != 0));
-        }
-    }
-}
-
 // https://github.com/abulmo/edax-reversi/blob/master/src/eval.c
 
-public class Eval
+public class EdaxFeature
 {
     public const int NUM_FEATURES = 47;
-    public const int NUM_PLY = 54;
-    public const int SCORE_MIN = -64;
-    public const int SCORE_MAX = 64;
-
-    readonly ushort[] feature = new ushort[48];
-    int numEmpties;
-    //readonly uint parity;
 
     /** array to convert features into coordinates */
     static readonly Square[][] EVAL_F2X = [
@@ -122,11 +79,17 @@ public class Eval
         0,     0,  2187,  2187,  2187,  2187,  2916,  2916,  2916,  2916,  3159,  3159,  3159,  3159,     0,     0
     ];
 
+    public ushort[] Feature { get; }
 
-    public void SetFeaturesFrom(Board board)
+    EdaxFeature(ushort[] feature)
     {
-        numEmpties = 64 - BitOperations.PopCount(board.Player ^ board.Opponent);
-        var b = (numEmpties & 1) != 0 ? board.Inv : board;
+        this.Feature = feature;
+    }
+
+    public static EdaxFeature From(Board board)
+    {
+        var feature = new ushort[48];
+        var b = (board.NumEmpties & 1) != 0 ? board.Inv : board;
 
         for (var i = 0; i < NUM_FEATURES; ++i)
         {
@@ -137,9 +100,51 @@ public class Eval
             }
             feature[i] = (ushort)(x + EVAL_OFFSET[i]);
         }
+
+        return new(feature);
+    }
+}
+
+public class EdaxEval
+{
+    const uint EDAX = 0x45444158;
+    const uint EVAL = 0x4556414c;
+    const uint LAVE = 0x4c415645;
+    const uint XADE = 0x58414445;
+    const int NUM_WEIGHTS = 114364;
+
+    public const int NUM_PLY = 54;
+    public const int SCORE_MIN = -64;
+    public const int SCORE_MAX = 64;
+
+    static readonly int[] EVAL_PACKED_OFS = [0, 10206, 40095, 69741, 99387, 102708, 106029, 109350, 112671, 113805, 114183, 114318, 114363];
+    static readonly SymmetryPacking[] P;
+
+    readonly EvalWeight[] weights;
+
+    public EvalHeader Header { get; }
+
+    EdaxEval(EvalHeader header, EvalWeight[] weights)
+    {
+        this.Header = header;
+        this.weights = weights;
     }
 
-    public static int AccumulateEval(Eval eval, EvalWeight[] weights, int ply)
+    public int Evaluate(Board board)
+    {
+        var feature = EdaxFeature.From(board);
+        var score = AccumulateEval(feature, 60 - board.NumEmpties);
+
+        if (score > 0) score += 64; else score -= 64;
+        score /= 128;
+
+        if (score < SCORE_MIN + 1) score = SCORE_MIN + 1;
+        if (score > SCORE_MAX - 1) score = SCORE_MAX - 1;
+
+        return score;
+    }
+
+    int AccumulateEval(EdaxFeature feature, int ply)
     {
         if (ply >= NUM_PLY)
             ply = NUM_PLY - 2 + (ply & 1);
@@ -148,7 +153,7 @@ public class Eval
             ply &= 1;
 
         var w = weights[ply];
-        ReadOnlySpan<ushort> f = eval.feature.AsSpan();
+        var f = feature.Feature;
 
         var sum = w.C9[f[0]] + w.C9[f[1]] + w.C9[f[2]] + w.C9[f[3]]
           + w.C10[f[4]] + w.C10[f[5]] + w.C10[f[6]] + w.C10[f[7]]
@@ -165,175 +170,33 @@ public class Eval
         return sum + w.S8x4[f[28]] + w.S8x4[f[29]] + w.S0;
     }
 
-    public static int Evaluate(Eval eval, EvalWeight[] weights)
+    public record EvalHeader(
+        uint Edax,
+        uint Eval,
+        uint Version,
+        uint Release,
+        uint Build,
+        double Date
+    );
+
+    /* unpacked weight */
+    class EvalWeight
     {
-        var score = AccumulateEval(eval, weights, 60 - eval.numEmpties);
-
-        if (score > 0) score += 64; else score -= 64;
-        score /= 128;
-
-        if (score < SCORE_MIN + 1) score = SCORE_MIN + 1;
-        if (score > SCORE_MAX - 1) score = SCORE_MAX - 1;
-
-        return score;
-    }
-}
-
-
-
-public record EvalHeader(
-    uint Edax,
-    uint Eval,
-    uint Version,
-    uint Release,
-    uint Build,
-    double Date
-);
-
-/* unpacked weight */
-public class EvalWeight
-{
-    public short S0;
-    public short[] C9 = new short[19683];
-    public short[] C10 = new short[59049];
-    public short[] S100 = new short[59049];
-    public short[] S101 = new short[59049];
-    public short[] S8x4 = new short[6561 * 4];
-    public short[] S7654 = new short[2187 + 729 + 243 + 81];
-}
-
-public static class Edax
-{
-    const uint EDAX = 0x45444158;
-    const uint EVAL = 0x4556414c;
-    const uint LAVE = 0x4c415645;
-    const uint XADE = 0x58414445;
-    const int NUM_WEIGHTS = 114364;
-
-    static readonly int[] EVAL_PACKED_OFS = [0, 10206, 40095, 69741, 99387, 102708, 106029, 109350, 112671, 113805, 114183, 114318, 114363];
-    static readonly SymmetryPacking[] P;
-
-    static int SetEvalPacking(Span<short> pe, int[] T, ReadOnlySpan<int> kd, int l, int k, int n, int d)
-    {
-        int i, q0, q1, q2, q3;
-
-        if (--d > 3)
-        {
-            l *= 3;
-            n = SetEvalPacking(pe, T, kd, l, k, n, d);
-            k += kd[d];
-            n = SetEvalPacking(pe, T, kd, l + 3, k, n, d);
-            k += kd[d];
-            n = SetEvalPacking(pe, T, kd, l + 6, k, n, d);
-        }
-        else
-        {
-            l *= 27;
-            for (q3 = 0; q3 < 3; ++q3)
-            {
-                for (q2 = 0; q2 < 3; ++q2)
-                {
-                    for (q1 = 0; q1 < 3; ++q1)
-                    {
-                        for (q0 = 0; q0 < 3; ++q0)
-                        {
-                            if (k < l) i = T[k];
-                            else T[l] = i = n++;
-                            pe[l++] = (short)i;
-                            k += kd[0];
-                        }
-                        k += (kd[1] - kd[0] * 3);
-                    }
-                    k += (kd[2] - kd[1] * 3);
-                }
-                k += (kd[3] - kd[2] * 3);
-            }
-        }
-        return n;
+        public short S0;
+        public short[] C9 = new short[19683];
+        public short[] C10 = new short[59049];
+        public short[] S100 = new short[59049];
+        public short[] S101 = new short[59049];
+        public short[] S8x4 = new short[6561 * 4];
+        public short[] S7654 = new short[2187 + 729 + 243 + 81];
     }
 
-    static Span<ushort> SetOpponentFeature(Span<ushort> p, int o, int d)
-    {
-        if (--d > 0)
-        {
-            p = SetOpponentFeature(p, (o + 1) * 3, d);
-            p = SetOpponentFeature(p, o * 3, d);
-            p = SetOpponentFeature(p, (o + 2) * 3, d);
-            return p;
-        }
-        else
-        {
-            p[0] = (ushort)(o + 1);
-            p[1] = (ushort)o;
-            p[2] = (ushort)(o + 2);
-            return p[3..];
-        }
-    }
-
-    static Edax()
-    {
-        P = [new SymmetryPacking(), new SymmetryPacking()];
-
-        ReadOnlySpan<int> kd_S10 = [19683, 6561, 2187, 729, 243, 81, 27, 9, 3, 1];
-        ReadOnlySpan<int> kd_C10 = [19683, 6561, 2187, 729, 81, 243, 27, 9, 3, 1];
-        ReadOnlySpan<int> kd_C9 = [1, 9, 3, 81, 27, 243, 2187, 729, 6561];
-        var T = new int[2 * 59049];
-        var OPPONENT_FEATURE = new ushort[59049];
-
-        SetOpponentFeature(OPPONENT_FEATURE, 0, 10);
-
-        SetEvalPacking(P[0].EVAL_S8, T, kd_S10[2..], 0, 0, 0, 8);   /* 8 squares : 6561 -> 3321 */
-        for (var j = 0; j < 6561; ++j)
-            P[1].EVAL_S8[j] = P[0].EVAL_S8[OPPONENT_FEATURE[j + 26244]];  // 1100000000(3)
-
-        SetEvalPacking(P[0].EVAL_S7, T, kd_S10[3..], 0, 0, 0, 7);   /* 7 squares : 2187 -> 1134 */
-        for (var j = 0; j < 2187; ++j)
-            P[1].EVAL_S7[j] = P[0].EVAL_S7[OPPONENT_FEATURE[j + 28431]];  // 1110000000(3)
-
-        SetEvalPacking(P[0].EVAL_S6, T, kd_S10[4..], 0, 0, 0, 6);   /* 6 squares : 729 -> 378 */
-        for (var j = 0; j < 729; ++j)
-            P[1].EVAL_S6[j] = P[0].EVAL_S6[OPPONENT_FEATURE[j + 29160]];  // 1111000000(3)
-
-        SetEvalPacking(P[0].EVAL_S5, T, kd_S10[5..], 0, 0, 0, 5);   /* 5 squares : 243 -> 135 */
-        for (var j = 0; j < 243; ++j)
-            P[1].EVAL_S5[j] = P[0].EVAL_S5[OPPONENT_FEATURE[j + 29403]];  // 1111100000(3)
-
-        SetEvalPacking(P[0].EVAL_S4, T, kd_S10[6..], 0, 0, 0, 4);   /* 4 squares : 81 -> 45 */
-        for (var j = 0; j < 81; ++j)
-            P[1].EVAL_S4[j] = P[0].EVAL_S4[OPPONENT_FEATURE[j + 29484]];  // 1111110000(3)
-
-        SetEvalPacking(P[0].EVAL_C9, T, kd_C9, 0, 0, 0, 9);    /* 9 corner squares : 19683 -> 10206 */
-        for (var j = 0; j < 19683; ++j)
-            P[1].EVAL_C9[j] = P[0].EVAL_C9[OPPONENT_FEATURE[j + 19683]];  // 1000000000(3)
-
-        SetEvalPacking(P[0].EVAL_S10, T, kd_S10, 0, 0, 0, 10); /* 10 squares (edge + X) : 59049 -> 29646 */
-        SetEvalPacking(P[0].EVAL_C10, T, kd_C10, 0, 0, 0, 10); /* 10 squares (angle + X) : 59049 -> 29889 */
-        for (var j = 0; j < 59049; ++j)
-        {
-            P[1].EVAL_S10[j] = P[0].EVAL_S10[OPPONENT_FEATURE[j]];
-            P[1].EVAL_C10[j] = P[0].EVAL_C10[OPPONENT_FEATURE[j]];
-        }
-    }
-
-    public static void ReadEval(BinaryReader reader)
+    public static EdaxEval ReadEval(BinaryReader reader)
     {
         var header = ReadHeader(reader);
         var weights = ReadWeights(reader, header.Edax);
 
-        Console.WriteLine("Read eval!!");
-
-        var board = new Board(
-            //0x0000000810000000,
-            //0x0000001008000000
-            0x0000003c1c040000,
-            0x0000080020080000
-        );
-        var eval = new Eval();
-        eval.SetFeaturesFrom(board);
-
-        var score = Eval.Evaluate(eval, weights);
-
-        Console.WriteLine($"Score: {score}");
+        return new(header, weights);
     }
 
     static EvalHeader ReadHeader(BinaryReader reader)
@@ -364,9 +227,9 @@ public static class Edax
     static EvalWeight[] ReadWeights(BinaryReader reader, uint edaxHeader)
     {
         var w = new short[NUM_WEIGHTS];
-        var weights = new EvalWeight[Eval.NUM_PLY - 2];
+        var weights = new EvalWeight[NUM_PLY - 2];
 
-        for (var ply = 0; ply < Eval.NUM_PLY; ++ply)
+        for (var ply = 0; ply < NUM_PLY; ++ply)
         {
             for (var i = 0; i < NUM_WEIGHTS; ++i)
             {
@@ -433,6 +296,51 @@ public static class Edax
         return edaxHeader == EDAX || evalHeader == EVAL || edaxHeader == XADE || evalHeader == LAVE;
     }
 
+    static EdaxEval()
+    {
+        P = [new SymmetryPacking(), new SymmetryPacking()];
+
+        ReadOnlySpan<int> kd_S10 = [19683, 6561, 2187, 729, 243, 81, 27, 9, 3, 1];
+        ReadOnlySpan<int> kd_C10 = [19683, 6561, 2187, 729, 81, 243, 27, 9, 3, 1];
+        ReadOnlySpan<int> kd_C9 = [1, 9, 3, 81, 27, 243, 2187, 729, 6561];
+        var T = new int[2 * 59049];
+        var OPPONENT_FEATURE = new ushort[59049];
+
+        SetOpponentFeature(OPPONENT_FEATURE, 0, 10);
+
+        SetEvalPacking(P[0].EVAL_S8, T, kd_S10[2..], 0, 0, 0, 8);   /* 8 squares : 6561 -> 3321 */
+        for (var j = 0; j < 6561; ++j)
+            P[1].EVAL_S8[j] = P[0].EVAL_S8[OPPONENT_FEATURE[j + 26244]];  // 1100000000(3)
+
+        SetEvalPacking(P[0].EVAL_S7, T, kd_S10[3..], 0, 0, 0, 7);   /* 7 squares : 2187 -> 1134 */
+        for (var j = 0; j < 2187; ++j)
+            P[1].EVAL_S7[j] = P[0].EVAL_S7[OPPONENT_FEATURE[j + 28431]];  // 1110000000(3)
+
+        SetEvalPacking(P[0].EVAL_S6, T, kd_S10[4..], 0, 0, 0, 6);   /* 6 squares : 729 -> 378 */
+        for (var j = 0; j < 729; ++j)
+            P[1].EVAL_S6[j] = P[0].EVAL_S6[OPPONENT_FEATURE[j + 29160]];  // 1111000000(3)
+
+        SetEvalPacking(P[0].EVAL_S5, T, kd_S10[5..], 0, 0, 0, 5);   /* 5 squares : 243 -> 135 */
+        for (var j = 0; j < 243; ++j)
+            P[1].EVAL_S5[j] = P[0].EVAL_S5[OPPONENT_FEATURE[j + 29403]];  // 1111100000(3)
+
+        SetEvalPacking(P[0].EVAL_S4, T, kd_S10[6..], 0, 0, 0, 4);   /* 4 squares : 81 -> 45 */
+        for (var j = 0; j < 81; ++j)
+            P[1].EVAL_S4[j] = P[0].EVAL_S4[OPPONENT_FEATURE[j + 29484]];  // 1111110000(3)
+
+        SetEvalPacking(P[0].EVAL_C9, T, kd_C9, 0, 0, 0, 9);    /* 9 corner squares : 19683 -> 10206 */
+        for (var j = 0; j < 19683; ++j)
+            P[1].EVAL_C9[j] = P[0].EVAL_C9[OPPONENT_FEATURE[j + 19683]];  // 1000000000(3)
+
+        SetEvalPacking(P[0].EVAL_S10, T, kd_S10, 0, 0, 0, 10); /* 10 squares (edge + X) : 59049 -> 29646 */
+        SetEvalPacking(P[0].EVAL_C10, T, kd_C10, 0, 0, 0, 10); /* 10 squares (angle + X) : 59049 -> 29889 */
+        for (var j = 0; j < 59049; ++j)
+        {
+            P[1].EVAL_S10[j] = P[0].EVAL_S10[OPPONENT_FEATURE[j]];
+            P[1].EVAL_C10[j] = P[0].EVAL_C10[OPPONENT_FEATURE[j]];
+        }
+    }
+
     class SymmetryPacking
     {
         public short[] EVAL_C10 = new short[59049];
@@ -443,5 +351,62 @@ public static class Edax
         public short[] EVAL_S6 = new short[729];
         public short[] EVAL_S5 = new short[243];
         public short[] EVAL_S4 = new short[81];
+    }
+
+    static Span<ushort> SetOpponentFeature(Span<ushort> p, int o, int d)
+    {
+        if (--d > 0)
+        {
+            p = SetOpponentFeature(p, (o + 1) * 3, d);
+            p = SetOpponentFeature(p, o * 3, d);
+            p = SetOpponentFeature(p, (o + 2) * 3, d);
+            return p;
+        }
+        else
+        {
+            p[0] = (ushort)(o + 1);
+            p[1] = (ushort)o;
+            p[2] = (ushort)(o + 2);
+            return p[3..];
+        }
+    }
+
+    static int SetEvalPacking(Span<short> pe, int[] T, ReadOnlySpan<int> kd, int l, int k, int n, int d)
+    {
+        int i, q0, q1, q2, q3;
+
+        if (--d > 3)
+        {
+            l *= 3;
+            n = SetEvalPacking(pe, T, kd, l, k, n, d);
+            k += kd[d];
+            n = SetEvalPacking(pe, T, kd, l + 3, k, n, d);
+            k += kd[d];
+            n = SetEvalPacking(pe, T, kd, l + 6, k, n, d);
+        }
+        else
+        {
+            l *= 27;
+            for (q3 = 0; q3 < 3; ++q3)
+            {
+                for (q2 = 0; q2 < 3; ++q2)
+                {
+                    for (q1 = 0; q1 < 3; ++q1)
+                    {
+                        for (q0 = 0; q0 < 3; ++q0)
+                        {
+                            if (k < l) i = T[k];
+                            else T[l] = i = n++;
+                            pe[l++] = (short)i;
+                            k += kd[0];
+                        }
+                        k += (kd[1] - kd[0] * 3);
+                    }
+                    k += (kd[2] - kd[1] * 3);
+                }
+                k += (kd[3] - kd[2] * 3);
+            }
+        }
+        return n;
     }
 }
