@@ -59,16 +59,22 @@ public class Reversi
     readonly Stack<Board> boards = new();
 
     public Board Board { get; private set; }
+    public Color Color { get; private set; }
 
     public bool IsOver => GenerateMoves().Count == 0;
 
-    public Reversi() : this(Board.Init)
+    public Reversi() : this(Board.Init, Color.BLACK)
     {
     }
 
-    public Reversi(Board board)
+    public Reversi(Board board) : this(board, Color.BLACK)
+    {
+    }
+
+    public Reversi(Board board, Color color)
     {
         this.Board = board;
+        this.Color = color;
     }
 
     public List<Square> GenerateMoves()
@@ -134,6 +140,10 @@ public class Reversi
             {
                 return flip;
             }
+            else
+            {
+                return 0UL;
+            }
         }
 
         throw new UnreachableException();
@@ -147,10 +157,17 @@ public class Reversi
 
         this.boards.Push(this.Board);
         this.Board = new(this.Board.Opponent ^ flip, this.Board.Player ^ flip ^ (1UL << (int)sq));
+        this.Color = this.Color == Color.BLACK ? Color.WHITE : Color.BLACK;
     }
 
     public void UndoMove()
     {
         this.Board = this.boards.Pop();
+        this.Color = this.Color == Color.BLACK ? Color.WHITE : Color.BLACK;
+    }
+
+    public override string ToString()
+    {
+        return $"{(Color == Color.BLACK ? Board : Board.Inv)} {(Color == Color.BLACK ? 'X' : 'O')}";
     }
 }

@@ -41,6 +41,24 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        var reversi = new Reversi.Reversi();
+
+        Console.WriteLine(reversi);
+
+        var moves = reversi.GenerateMoves();
+
+        foreach (var move in moves)
+        {
+            Console.WriteLine(move);
+        }
+
+        reversi.MakeMove(moves[0]);
+        reversi.MakeMove(reversi.GenerateMoves()[0]);
+        reversi.MakeMove(reversi.GenerateMoves()[0]);
+        reversi.MakeMove(reversi.GenerateMoves()[0]);
+
+        Console.WriteLine(reversi);
+
         forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("sample-data/weather.json");
 
         using var stream = await Http.GetStreamAsync("data/eval.dat");
@@ -54,9 +72,16 @@ else
         Console.WriteLine($"{eval.Evaluate(new Reversi.Board(0x0000080c1cec3830, 0x1c3c3670e0100004))}"); // 2 (228)
 
         var generator = new Generator.Generator(eval, 0);
-        var board = generator.Generate(trial: 100);
-
-        Console.WriteLine(board);
+        var board = generator.Generate(minPly: 16, trial: 100);
+        Console.WriteLine(new Reversi.Reversi(board.Item1, board.Item2));
+        board = generator.Generate(minPly: 16, trial: 100);
+        Console.WriteLine(new Reversi.Reversi(board.Item1, board.Item2));
+        board = generator.Generate(minPly: 16, trial: 100);
+        Console.WriteLine(new Reversi.Reversi(board.Item1, board.Item2));
+        board = generator.Generate(minPly: 16, trial: 100);
+        Console.WriteLine(new Reversi.Reversi(board.Item1, board.Item2));
+        board = generator.Generate(minPly: 16, trial: 100);
+        Console.WriteLine(new Reversi.Reversi(board.Item1, board.Item2));
     }
 
     public class WeatherForecast
