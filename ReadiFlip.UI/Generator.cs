@@ -23,16 +23,18 @@ public class Generator
     /// <summary>
     /// 読み練習用の局面を 1 つ生成する。条件は以下の通り。<br/>
     ///
-    /// - 1 手読みで最善のスコアを x とし、スコアが x - d 以上の手が他に 1 手以上存在する。 <br/>
+    /// - 1 手読みで最善のスコアを x とし、スコアが x - d1 以上の手が他に 1 手以上存在する。 <br/>
     /// - 3 手読みでの最善手が上の1手読みの条件に引っかかる手の中に存在する。<br/>
-    /// - 3 手読みで最善のスコアを x として、その他の手はすべて x - d 未満のスコアになる。 <br/>
+    /// - 3 手読みで最善のスコアを x として、その他の手はすべて x - d2 未満のスコアになる。 <br/>
     /// </summary>
-    /// <param name="d"></param>
+    /// <param name="d1"></param>
+    /// <param name="d2"></param>
     /// <param name="minPly"></param>
+    /// <param name="maxPly"></param>
     /// <param name="trial"></param>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
-    public (Board, Color) Generate(int d1 = 4, int d2 = 6, int minPly = 15, int trial = 10000)
+    public (Board, Color) Generate(int d1 = 4, int d2 = 6, int minPly = 15, int maxPly = 50, int trial = 10000)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(d1);
         ArgumentOutOfRangeException.ThrowIfNegative(d2);
@@ -46,7 +48,7 @@ public class Generator
             {
                 var ply = 60 - reversi.Board.NumEmpties;
 
-                if (ply >= minPly && IsGoodForPractice(reversi.Board, d1, d2))
+                if (minPly <= ply && ply <= maxPly && IsGoodForPractice(reversi.Board, d1, d2))
                 {
                     return (reversi.Board, reversi.Color);
                 }
