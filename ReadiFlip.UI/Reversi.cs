@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Diagnostics;
+using System.Numerics;
 
 namespace ReadiFlip.Reversi;
 
@@ -27,17 +28,129 @@ public record Board(ulong Player, ulong Opponent)
 {
     public Board Inv => new Board(Opponent, Player);
 
-    public Square this[Square x]
+    public Color this[Square x]
     {
         get
         {
             ulong b = 1UL << (int)x;
-            return (Square)(Convert.ToInt32((Player & b) == 0) * 2 - Convert.ToInt32((Opponent & b) != 0));
+            return (Color)(Convert.ToInt32((Player & b) == 0) * 2 - Convert.ToInt32((Opponent & b) != 0));
         }
     }
 
     public int NumEmpties => 64 - BitOperations.PopCount(Player ^ Opponent);
 
     public static Board Init { get; } = new(0x0000000810000000, 0x0000001008000000);
+
+    public override string ToString()
+    {
+        // Player=X
+        // Opponent=O
+
+        return string.Join(
+            string.Empty,
+            Enumerable.Range(0, 64)
+            .Select(x => this[(Square)x] == Color.BLACK ? 'X' : this[(Square)x] == Color.WHITE ? 'O' : '-')
+        );
+    }
 }
 
+public class Reversi
+{
+    readonly Stack<Board> boards = new();
+
+    public Board Board { get; private set; }
+
+    public bool IsOver => GenerateMoves().Count == 0;
+
+    public Reversi() : this(Board.Init)
+    {
+    }
+
+    public Reversi(Board board)
+    {
+        this.Board = board;
+    }
+
+    public List<Square> GenerateMoves()
+    {
+        var moves = new List<Square>();
+
+        for (var i = 0; i < 64; ++i)
+        {
+            var sq = (Square)i;
+
+            if (Board[sq] != Color.EMPTY) continue;
+
+            var flip = ComputeFlip(Board, sq);
+
+            if (flip != 0)
+            {
+                moves.Add(sq);
+            }
+        }
+
+        return moves;
+    }
+
+    public static ulong ComputeFlip(Board board, Square sq)
+    {
+        var flip = 0UL;
+
+        for (var dy = -1; dy <= 1; ++dy)
+        {
+            for (var dx = -1; dx <= 1; ++dx)
+            {
+                if (dy == 0 && dx == 0) continue;
+                flip ^= ComputeFlip(board, sq, dy, dx);
+            }
+        }
+
+        return flip;
+    }
+
+    public static ulong ComputeFlip(Board board, Square sq, int dy, int dx)
+    {
+        var flip = 0UL;
+        var y = (int)sq / 8;
+        var x = (int)sq % 8;
+
+        for (var k = 1; k <= 8; ++k)
+        {
+            var ny = y + k * dy;
+            var nx = x + k * dx;
+
+            if (!(0 <= ny && ny < 8 && 0 <= nx && nx < 8))
+            {
+                return 0UL;
+            }
+
+            var s = ny * 8 + nx;
+
+            if (((board.Opponent >> s) & 1) != 0)
+            {
+                flip ^= 1UL << s;
+            }
+            else if (((board.Player >> s) & 1) != 0)
+            {
+                return flip;
+            }
+        }
+
+        throw new UnreachableException();
+    }
+
+    public void MakeMove(Square sq)
+    {
+        var flip = ComputeFlip(Board, sq);
+
+        if (flip == 0UL) throw new Exception("Invalid move");
+
+        this.boards.Push(this.Board);
+        this.Board = new(this.Board.Opponent ^ flip, this.Board.Player ^ flip ^ (1UL << (int)sq));
+    }
+
+    public void UndoMove()
+    {
+        this.Board = this.boards.Pop();
+    }
+}
