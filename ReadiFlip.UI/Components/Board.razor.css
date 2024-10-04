@@ -1,0 +1,98 @@
+﻿
+ul {
+    padding: 0;
+    margin: 0;
+}
+
+li {
+    list-style: none; /* 必要に応じてlistのデフォルトスタイルを除去 */
+}
+
+.container {
+    --square-size: 4rem;
+
+    display: grid;
+    grid-template-rows: auto 1fr;
+    grid-template-columns: auto 1fr;
+    padding: 0;
+    width: fit-content;
+}
+
+.board {
+    display: flex;
+    flex-wrap: wrap;
+    border: 0.08rem solid black;
+    border-bottom: none;
+    border-right: none;
+    grid-row: 2 / 3;
+    grid-column: 2 / 3;
+    width: calc(var(--square-size) * 8);
+}
+
+    .board > li {
+        position: relative;
+        flex-basis: 12.5%; /* 各 li の幅を12.5%に設定 */
+        box-sizing: border-box; /* パディングやボーダーを含めたサイズ調整 */
+        width: var(--square-size);
+        height: var(--square-size);
+        border: 0.08rem solid black;
+        border-top: none;
+        border-left: none;
+        background-color: #3b9c46;
+    }
+
+        .board > li::after {
+            position: absolute;
+            content: "";
+            width: calc(var(--square-size) * 0.85);
+            height: calc(var(--square-size) * 0.85);
+            border-radius: 50%;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            margin: auto;
+        }
+
+            .board > li.black::after {
+                background-color: black;
+            }
+
+            .board > li.white::after {
+                border: 0.08rem solid black;
+                background-color: white;
+            }
+
+.row-header {
+    grid-row: 2 / 3;
+    grid-column: 1 / 2;
+    display: flex;
+    flex-direction: column;
+    padding-right: 0.3rem;
+}
+
+    .row-header > li {
+        flex-basis: 12.5%; /* 各 li の幅を12.5%に設定 */
+        box-sizing: border-box; /* パディングやボーダーを含めたサイズ調整 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1.0;
+    }
+
+.col-header {
+    grid-row: 1 / 2;
+    grid-column: 2 / 3;
+    display: flex;
+    padding-bottom: 0.3rem;
+    width: calc(var(--square-size) * 8);
+}
+
+    .col-header > li {
+        flex-basis: 12.5%; /* 各 li の幅を12.5%に設定 */
+        box-sizing: border-box; /* パディングやボーダーを含めたサイズ調整 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1.0;
+    }

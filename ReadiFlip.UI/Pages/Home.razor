@@ -1,7 +1,42 @@
 ﻿@page "/"
+@using ReadiFlip.UI.Components;
+@using ReadiFlip.Reversi;
+@using ReadiFlip.Generator;
+@inject HttpClient Http
 
-<PageTitle>Home</PageTitle>
+<Board BoardParam="@board" Player="@player"/>
 
-<h1>Hello, world!</h1>
+@if (generator != null)
+{
+    <button type="button" @onclick="GenerateNew">
+        生成！
+    </button>
+}
 
-Welcome to your new app.
+@code {
+    Color? player;
+    ReadiFlip.Reversi.Board? board;
+    Generator? generator;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var stream = await Http.GetStreamAsync("data/eval.dat");
+        // using var gzipStream = new System.IO.Compression.GZipStream(stream, System.IO.Compression.CompressionMode.Decompress);
+        using var reader = new BinaryReader(stream); // very slow
+
+        var eval = Edax.EdaxEval.ReadEval(reader); // Task.Run() しても別スレッドでは実行されないらしい
+
+        Console.WriteLine($"{eval.Evaluate(ReadiFlip.Reversi.Board.Init)}"); // -4
+        Console.WriteLine($"{eval.Evaluate(new ReadiFlip.Reversi.Board(0x0000003c1c040000, 0x0000080020080000))}"); // -1
+        Console.WriteLine($"{eval.Evaluate(new ReadiFlip.Reversi.Board(0x0000080c1cec3830, 0x1c3c3670e0100004))}"); // 2 (228)
+
+        generator = new Generator(eval, 0);
+    }
+
+    void GenerateNew()
+    {
+        var (board, color) = generator!.Generate(minPly: 16, trial: 100);
+        this.board = board;
+        this.player = color;
+    }
+}
