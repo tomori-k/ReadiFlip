@@ -25,11 +25,6 @@
         using var reader = new BinaryReader(stream); // very slow
 
         var eval = Edax.EdaxEval.ReadEval(reader); // Task.Run() しても別スレッドでは実行されないらしい
-
-        Console.WriteLine($"{eval.Evaluate(ReadiFlip.Reversi.Board.Init)}"); // -4
-        Console.WriteLine($"{eval.Evaluate(new ReadiFlip.Reversi.Board(0x0000003c1c040000, 0x0000080020080000))}"); // -1
-        Console.WriteLine($"{eval.Evaluate(new ReadiFlip.Reversi.Board(0x0000080c1cec3830, 0x1c3c3670e0100004))}"); // 2 (228)
-
         generator = new Generator(eval, 0);
     }
 

@@ -5,6 +5,9 @@ namespace ReadiFlip.Edax;
 
 // https://qiita.com/tanaka-a/items/6d6725d5866ebe85fb0b
 // https://github.com/abulmo/edax-reversi/blob/master/src/eval.c
+// Console.WriteLine($"{eval.Evaluate(ReadiFlip.Reversi.Board.Init)}"); // -4
+// Console.WriteLine($"{eval.Evaluate(new ReadiFlip.Reversi.Board(0x0000003c1c040000, 0x0000080020080000))}"); // -1
+// Console.WriteLine($"{eval.Evaluate(new ReadiFlip.Reversi.Board(0x0000080c1cec3830, 0x1c3c3670e0100004))}"); // 2 (228)
 
 public class EdaxFeature
 {
