@@ -11,11 +11,22 @@
     <button type="button" @onclick="GenerateNew">
         生成！
     </button>
+    <button type="button" @onclick="() => showAnswer = true">
+        答え
+    </button>
+}
+
+@if (showAnswer && answer != null)
+{
+    <p>答え: @answer</p>
 }
 
 @code {
     Color? player;
     ReadiFlip.Reversi.Board? board;
+    Square? answer;
+    bool showAnswer = false;
+
     Generator? generator;
 
     protected override async Task OnInitializedAsync()
@@ -30,8 +41,10 @@
 
     void GenerateNew()
     {
-        var (board, color) = generator!.Generate(minPly: 16, trial: 100);
+        showAnswer = false;
+        var (board, color, answer) = generator!.Generate(minPly: 16, trial: 100);
         this.board = board;
         this.player = color;
+        this.answer = answer;
     }
 }

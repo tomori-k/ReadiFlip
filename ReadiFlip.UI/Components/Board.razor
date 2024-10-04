@@ -2,15 +2,17 @@
 @using BoardRecord = ReadiFlip.Reversi.Board;
 
 @if(BoardParam != null && Player != null) {
+    var board = Player == Color.BLACK ? BoardParam : BoardParam.Inv;
+
     <div class="container">
         <ul class="row-header">
-            @foreach(var row in "ABCDEFGH")
+            @foreach(var row in "12345678")
             {
                 <li>@row</li>
             }
         </ul>
         <ul class="col-header">
-            @foreach (var col in "12345678")
+            @foreach (var col in "ABCDEFGH")
             {
                 <li>@col</li>
             }
@@ -19,7 +21,7 @@
             @for (var i = 0; i < 64; ++i)
             {
                 var sq = (Square)i;
-                var c = BoardParam[sq];
+                var c = board[sq];
                 <li class="@(c == Color.BLACK ? "black" : c== Color.WHITE ? "white" : "")"></li>
             }
         </ul>

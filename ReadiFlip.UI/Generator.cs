@@ -3,6 +3,12 @@ using ReadiFlip.Reversi;
 
 namespace ReadiFlip.Generator;
 
+public record Puzzle(
+    Board Board,
+    Color Color,
+    Square Answer
+);
+
 public class Generator
 {
     readonly EdaxEval eval;
@@ -34,7 +40,7 @@ public class Generator
     /// <param name="trial"></param>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
-    public (Board, Color) Generate(int d1 = 4, int d2 = 6, int minPly = 15, int maxPly = 50, int trial = 10000)
+    public Puzzle Generate(int d1 = 4, int d2 = 6, int minPly = 15, int maxPly = 50, int trial = 10000)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(d1);
         ArgumentOutOfRangeException.ThrowIfNegative(d2);
@@ -48,9 +54,9 @@ public class Generator
             {
                 var ply = 60 - reversi.Board.NumEmpties;
 
-                if (minPly <= ply && ply <= maxPly && IsGoodForPractice(reversi.Board, d1, d2))
+                if (minPly <= ply && ply <= maxPly && IsGoodForPractice(reversi.Board, d1, d2, out var answer))
                 {
-                    return (reversi.Board, reversi.Color);
+                    return new(reversi.Board, reversi.Color, answer);
                 }
 
                 MakeMove(reversi, random);
@@ -65,8 +71,11 @@ public class Generator
     /// </summary>
     /// <param name="board"></param>
     /// <returns></returns>
-    public bool IsGoodForPractice(Board board, int d1, int d2)
+    public bool IsGoodForPractice(Board board, int d1, int d2, out Square answer)
     {
+        // default
+        answer = Square.NOMOVE;
+
         var reversi = new Reversi.Reversi(board);
 
         if (reversi.IsOver) return false;
@@ -89,6 +98,8 @@ public class Generator
             .Where(x => bestDepth3.Score - x.Score <= d2)
             .Count() <= 1)
         ) return false;
+
+        answer = bestDepth3.Sq;
 
         return true;
     }
