@@ -36,7 +36,11 @@
         using var reader = new BinaryReader(stream); // very slow
 
         var eval = Edax.EdaxEval.ReadEval(reader); // Task.Run() しても別スレッドでは実行されないらしい
+        #if DEBUG
         generator = new Generator(eval, 0);
+        #else
+        generator = new Generator(eval);
+        #endif
     }
 
     void GenerateNew()
