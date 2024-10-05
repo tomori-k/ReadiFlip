@@ -1,9 +1,11 @@
 ﻿@using ReadiFlip.Reversi;
 @using BoardRecord = ReadiFlip.Reversi.Board;
+@using Color = ReadiFlip.Reversi.Color;
 
 @if(BoardParam != null && Player != null) {
     var board = Player == Color.BLACK ? BoardParam : BoardParam.Inv;
 
+    <p class="player">@(Player == Color.BLACK ? "黒番" : "白番")</p>
     <div class="container">
         <ul class="row-header">
             @foreach(var row in "12345678")
@@ -26,8 +28,9 @@
             }
         </ul>
     </div>
-    <p>@Player</p>
-    <p>@(new Reversi(BoardParam, Player.Value))</p>
+    <div>
+        <FluentTextField Class="board-text" ReadOnly="true" Value="@(new Reversi(BoardParam, Player.Value).ToString())" />
+    </div>
 }
 
 @code {

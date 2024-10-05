@@ -2,23 +2,26 @@
 @using ReadiFlip.UI.Components;
 @using ReadiFlip.Reversi;
 @using ReadiFlip.Generator;
+@using Color = ReadiFlip.Reversi.Color;
 @inject HttpClient Http
 
 <Board BoardParam="@board" Player="@player"/>
 
 @if (generator != null)
 {
-    <button type="button" @onclick="GenerateNew">
+    <FluentButton Appearance="Appearance.Accent" @onclick="GenerateNew">
         生成！
-    </button>
-    <button type="button" @onclick="() => showAnswer = true">
+    </FluentButton>
+    <FluentButton @onclick="() => showAnswer = true">
         答え
-    </button>
+    </FluentButton>
 }
 
 @if (showAnswer && answer != null)
 {
-    <p>答え: @answer</p>
+    <FluentCard>
+        <FluentLabel Typo="Typography.Body">答え: @answer</FluentLabel>
+    </FluentCard>
 }
 
 @code {

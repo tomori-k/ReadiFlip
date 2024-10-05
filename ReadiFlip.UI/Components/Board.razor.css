@@ -108,3 +108,11 @@ li {
         justify-content: center;
         line-height: 1.0;
     }
+
+.player {
+    text-align: center;
+}
+
+::deep > .board-text {
+    width: 100%;
+}
