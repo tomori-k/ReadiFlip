@@ -1,12 +1,20 @@
 ﻿using ReadiFlip.Edax;
 using ReadiFlip.Reversi;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ReadiFlip.Generator;
 
 public record Puzzle(
     Board Board,
     Color Color,
-    Square Answer
+    SearchResult BestMove,
+    List<SearchResult> OtherMoves
+);
+
+public record SearchResult(
+    Square Move,
+    int Score,
+    Square[] Pv
 );
 
 public class Generator
@@ -56,7 +64,7 @@ public class Generator
 
                 if (minPly <= ply && ply <= maxPly && IsGoodForPractice(reversi.Board, d1, d2, out var answer))
                 {
-                    return new(reversi.Board, reversi.Color, answer);
+                    return new(reversi.Board, reversi.Color, answer.Value.Best, answer.Value.Others);
                 }
 
                 MakeMove(reversi, random);
@@ -71,10 +79,10 @@ public class Generator
     /// </summary>
     /// <param name="board"></param>
     /// <returns></returns>
-    public bool IsGoodForPractice(Board board, int d1, int d2, out Square answer)
+    public bool IsGoodForPractice(Board board, int d1, int d2, [NotNullWhen(true)] out (SearchResult Best, List<SearchResult> Others)? answer)
     {
         // default
-        answer = Square.NOMOVE;
+        answer = null;
 
         var reversi = new Reversi.Reversi(board);
 
@@ -91,7 +99,7 @@ public class Generator
         var bestDepth3 = scoresDepth3.MaxBy(x => x.Score)!;
 
         // 2. 3手読みでの最善手が 1 手読みの候補の中にある
-        if (!candidatesDepth1.Any(x => x.Sq == bestDepth3.Sq)) return false;
+        if (!candidatesDepth1.Any(x => x.Move == bestDepth3.Move)) return false;
 
         // 3. 3手読みの他の手が最善手よりも明らかに悪い
         if (!(scoresDepth3
@@ -99,7 +107,12 @@ public class Generator
             .Count() <= 1)
         ) return false;
 
-        answer = bestDepth3.Sq;
+        answer = (
+            bestDepth3,
+            scoresDepth3
+                .Where(x => candidatesDepth1.Select(y => y.Move).Contains(x.Move))
+                .ToList()
+        );
 
         return true;
     }
@@ -124,44 +137,51 @@ public class Generator
         var i = random.Next(candidates.Count);
         var move = candidates[i];
 
-        reversi.MakeMove(move.Sq);
+        reversi.MakeMove(move.Move);
     }
 
-    record MoveWithScore(Square Sq, int Score);
 
-    List<MoveWithScore> GenerateMovesWithScore(Reversi.Reversi reversi, int depth)
+    List<SearchResult> GenerateMovesWithScore(Reversi.Reversi reversi, int depth)
     {
         if (depth <= 0) throw new ArgumentOutOfRangeException();
 
         var moves = reversi.GenerateMoves();
-        var movesWithScore = new List<MoveWithScore>();
+        var results = new List<SearchResult>();
+        Span<Square> pvBuffer = stackalloc Square[depth - 1];
 
         foreach (var move in moves)
         {
             reversi.MakeMove(move);
-            movesWithScore.Add(new(move, -Search(reversi, depth - 1)));
+            var score = -Search(reversi, depth - 1, pvBuffer);
+            results.Add(new(move, score, pvBuffer.ToArray()));
             reversi.UndoMove();
         }
 
-        return movesWithScore;
+        return results;
     }
 
-    int Search(Reversi.Reversi reversi, int depth, int alpha = EdaxEval.SCORE_MIN, int beta = EdaxEval.SCORE_MAX)
+    int Search(Reversi.Reversi reversi, int depth, Span<Square> pv, int alpha = EdaxEval.SCORE_MIN, int beta = EdaxEval.SCORE_MAX)
     {
         if (depth == 0) return eval.Evaluate(reversi.Board);
 
         var moves = reversi.GenerateMoves();
         var bestScore = EdaxEval.SCORE_MIN;
+        Span<Square> pvBuffer = stackalloc Square[pv.Length - 1];
 
         foreach (var move in moves)
         {
             reversi.MakeMove(move);
             try
             {
-                var score = -Search(reversi, depth - 1, -beta, -Math.Max(alpha, bestScore));
+                var score = -Search(reversi, depth - 1, pvBuffer, -beta, -Math.Max(alpha, bestScore));
 
                 if (score >= beta) return score;
-                if (score > bestScore) bestScore = score;
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    pv[0] = move;
+                    pvBuffer.CopyTo(pv[1..]);
+                }
             }
             finally
             {

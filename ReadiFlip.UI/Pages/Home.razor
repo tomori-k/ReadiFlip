@@ -10,7 +10,7 @@
 @if (generator != null)
 {
     <FluentButton Appearance="Appearance.Accent" @onclick="GenerateNew">
-        生成！
+        生成
     </FluentButton>
     <FluentButton @onclick="() => showAnswer = true">
         答え
@@ -21,6 +21,12 @@
 {
     <FluentCard>
         <FluentLabel Typo="Typography.Body">答え: @answer</FluentLabel>
+
+        <FluentDataGrid Items="@candidates">
+            <PropertyColumn Property="@(x => x.Score)" Sortable="true" InitialSortDirection="SortDirection.Descending" Title="スコア"/>
+            <PropertyColumn Property="@(x => x.Move)" Sortable="false" Title="指し手"/>
+            <PropertyColumn Property="@(x => string.Join("", x.Pv))" Sortable="false" Title="読み筋"/>
+        </FluentDataGrid>
     </FluentCard>
 }
 
@@ -28,6 +34,7 @@
     Color? player;
     ReadiFlip.Reversi.Board? board;
     Square? answer;
+    IQueryable<SearchResult> candidates = new SearchResult[0].AsQueryable(); 
     bool showAnswer = false;
 
     Generator? generator;
@@ -40,7 +47,7 @@
 
         var eval = Edax.EdaxEval.ReadEval(reader); // Task.Run() しても別スレッドでは実行されないらしい
         #if DEBUG
-        generator = new Generator(eval, 0);
+    generator = new Generator(eval, 0);
         #else
         generator = new Generator(eval);
         #endif
@@ -49,9 +56,10 @@
     void GenerateNew()
     {
         showAnswer = false;
-        var (board, color, answer) = generator!.Generate(minPly: 16, trial: 100);
+        var (board, color, bestMove, otherMoves) = generator!.Generate(minPly: 16, trial: 100);
         this.board = board;
         this.player = color;
-        this.answer = answer;
+        this.answer = bestMove.Move;
+        this.candidates = otherMoves.AsQueryable();
     }
 }
