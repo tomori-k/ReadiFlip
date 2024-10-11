@@ -24,13 +24,26 @@
             {
                 var sq = (Square)i;
                 var c = board[sq];
-                <li class="@(c == Color.BLACK ? "black" : c== Color.WHITE ? "white" : "")"></li>
+                <li class="@(c == Color.BLACK ? "black"
+                           : c == Color.WHITE ? "white"
+                           : Scores != null && Scores.ContainsKey(sq) && Scores[sq] == Scores.MaxBy(t => t.Value).Value ? "bestscore"
+                           : Scores == null && ShowMoves && BoardParam.IsValidMove(sq) ? "move"
+                           : "")"
+                    @onclick="() => OnSquareClicked.InvokeAsync(sq)">
+
+                    @if (BoardParam.IsValidMove(sq) && (Scores?.ContainsKey(sq) ?? false))
+                    {
+                        <span>@(Scores[sq] > 0 ? "+" : "")@Scores[sq]</span>
+                    }
+                </li>
             }
         </ul>
     </div>
+    <!--
     <div>
         <FluentTextField Class="board-text" ReadOnly="true" Value="@(new Reversi(BoardParam, Player.Value).ToString())" />
     </div>
+    -->
 }
 
 @code {
@@ -39,4 +52,13 @@
 
     [Parameter]
     public Color? Player { get; set; }
+
+    [Parameter]
+    public EventCallback<Square> OnSquareClicked { get; set; }
+
+    [Parameter]
+    public bool ShowMoves { get; set; }
+
+    [Parameter]
+    public Dictionary<Square, int>? Scores { get; set; }
 }

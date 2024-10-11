@@ -33,7 +33,7 @@ li {
 .board {
     display: flex;
     flex-wrap: wrap;
-    border: 0.08rem solid black;
+    border: calc(var(--square-size) * 0.03) solid black;
     border-bottom: none;
     border-right: none;
     grid-row: 2 / 3;
@@ -47,10 +47,15 @@ li {
         box-sizing: border-box; /* パディングやボーダーを含めたサイズ調整 */
         width: var(--square-size);
         height: var(--square-size);
-        border: 0.08rem solid black;
+        border: calc(var(--square-size) * 0.03) solid black;
         border-top: none;
         border-left: none;
         background-color: #3b9c46;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #f2e19b;
+        font-size: calc(var(--square-size) * 0.5);
     }
 
         .board > li::after {
@@ -66,14 +71,34 @@ li {
             margin: auto;
         }
 
-            .board > li.black::after {
-                background-color: black;
-            }
+        .board > li.black::after {
+            background-color: black;
+        }
 
-            .board > li.white::after {
-                border: 0.08rem solid black;
-                background-color: white;
-            }
+        .board > li.white::after {
+            border: 0.08rem solid black;
+            background-color: white;
+        }
+
+        .board > li.move::after {
+            width: calc(var(--square-size) * 0.4);
+            height: calc(var(--square-size) * 0.4);
+            background-color: white;
+            opacity: 30%;
+        }
+
+        .board > li.bestscore {
+            color: #8ee8e8;
+        }
+
+        .board > li:hover.move::after {
+            background-color: black;
+        }
+
+        .board > li:active.move::after {
+            background-color: black;
+            opacity: 50%;
+        }
 
 .row-header {
     grid-row: 2 / 3;

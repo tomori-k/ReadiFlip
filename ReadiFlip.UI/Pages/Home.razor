@@ -5,25 +5,27 @@
 @using Color = ReadiFlip.Reversi.Color;
 @inject HttpClient Http
 
-<Board BoardParam="@board" Player="@player"/>
+<Board BoardParam="@board" Player="@player" ShowMoves="true" Scores="scores" OnSquareClicked="@OnSquareClicked"/>
 
 @if (generator != null)
 {
     <FluentButton Appearance="Appearance.Accent" @onclick="GenerateNew">
         生成
     </FluentButton>
-    <FluentButton @onclick="() => showAnswer = true">
-        答え
-    </FluentButton>
 }
 
 @if (showAnswer && answer != null)
 {
     <FluentCard>
-        <FluentLabel Typo="Typography.Body">答え: @answer</FluentLabel>
+        <FluentLabel Typo="Typography.Body">
+            @(isCorrect ? "\u2b55正解！" : "\u274c不正解:(")
+        </FluentLabel>
+        <FluentLabel Typo="Typography.Body">
+            答え: @answer
+        </FluentLabel>
 
         <FluentDataGrid Items="@candidates">
-            <PropertyColumn Property="@(x => x.Score)" Sortable="true" InitialSortDirection="SortDirection.Descending" Title="スコア"/>
+            <PropertyColumn Property="@(x => x.Score)" Sortable="true" InitialSortDirection="SortDirection.Descending" Title="評価値"/>
             <PropertyColumn Property="@(x => x.Move)" Sortable="false" Title="指し手"/>
             <PropertyColumn Property="@(x => string.Join("", x.Pv))" Sortable="false" Title="読み筋"/>
         </FluentDataGrid>
@@ -36,6 +38,8 @@
     Square? answer;
     IQueryable<SearchResult> candidates = new SearchResult[0].AsQueryable(); 
     bool showAnswer = false;
+    bool isCorrect;
+    Dictionary<Square, int>? scores = null;
 
     Generator? generator;
 
@@ -56,10 +60,20 @@
     void GenerateNew()
     {
         showAnswer = false;
+        scores = null;
         var (board, color, bestMove, otherMoves) = generator!.Generate(minPly: 16, trial: 100);
         this.board = board;
         this.player = color;
         this.answer = bestMove.Move;
         this.candidates = otherMoves.AsQueryable();
+    }
+
+    void OnSquareClicked(Square sq)
+    {
+        if (!board?.IsValidMove(sq) ?? false) return;
+
+        showAnswer = true;
+        isCorrect = sq == answer;
+        scores = candidates.ToDictionary(x => x.Move, x => x.Score);
     }
 }

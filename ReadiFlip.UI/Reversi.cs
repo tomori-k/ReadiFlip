@@ -41,6 +41,59 @@ public record Board(ulong Player, ulong Opponent)
 
     public static Board Init { get; } = new(0x0000000810000000, 0x0000001008000000);
 
+    public ulong ComputeFlip(Square sq)
+    {
+        var flip = 0UL;
+
+        for (var dy = -1; dy <= 1; ++dy)
+        {
+            for (var dx = -1; dx <= 1; ++dx)
+            {
+                if (dy == 0 && dx == 0) continue;
+                flip ^= ComputeFlip(sq, dy, dx);
+            }
+        }
+
+        return flip;
+    }
+
+    ulong ComputeFlip(Square sq, int dy, int dx)
+    {
+        var flip = 0UL;
+        var y = (int)sq / 8;
+        var x = (int)sq % 8;
+
+        for (var k = 1; k <= 8; ++k)
+        {
+            var ny = y + k * dy;
+            var nx = x + k * dx;
+
+            if (!(0 <= ny && ny < 8 && 0 <= nx && nx < 8))
+            {
+                return 0UL;
+            }
+
+            var s = ny * 8 + nx;
+
+            if (((Opponent >> s) & 1) != 0)
+            {
+                flip ^= 1UL << s;
+            }
+            else if (((Player >> s) & 1) != 0)
+            {
+                return flip;
+            }
+            else
+            {
+                return 0UL;
+            }
+        }
+
+        throw new UnreachableException();
+    }
+
+    public bool IsValidMove(Square sq) => ComputeFlip(sq) != 0UL;
+
     public override string ToString()
     {
         // Player=X
@@ -87,9 +140,7 @@ public class Reversi
 
             if (Board[sq] != Color.EMPTY) continue;
 
-            var flip = ComputeFlip(Board, sq);
-
-            if (flip != 0)
+            if (Board.IsValidMove(sq))
             {
                 moves.Add(sq);
             }
@@ -98,60 +149,9 @@ public class Reversi
         return moves;
     }
 
-    public static ulong ComputeFlip(Board board, Square sq)
-    {
-        var flip = 0UL;
-
-        for (var dy = -1; dy <= 1; ++dy)
-        {
-            for (var dx = -1; dx <= 1; ++dx)
-            {
-                if (dy == 0 && dx == 0) continue;
-                flip ^= ComputeFlip(board, sq, dy, dx);
-            }
-        }
-
-        return flip;
-    }
-
-    public static ulong ComputeFlip(Board board, Square sq, int dy, int dx)
-    {
-        var flip = 0UL;
-        var y = (int)sq / 8;
-        var x = (int)sq % 8;
-
-        for (var k = 1; k <= 8; ++k)
-        {
-            var ny = y + k * dy;
-            var nx = x + k * dx;
-
-            if (!(0 <= ny && ny < 8 && 0 <= nx && nx < 8))
-            {
-                return 0UL;
-            }
-
-            var s = ny * 8 + nx;
-
-            if (((board.Opponent >> s) & 1) != 0)
-            {
-                flip ^= 1UL << s;
-            }
-            else if (((board.Player >> s) & 1) != 0)
-            {
-                return flip;
-            }
-            else
-            {
-                return 0UL;
-            }
-        }
-
-        throw new UnreachableException();
-    }
-
     public void MakeMove(Square sq)
     {
-        var flip = ComputeFlip(Board, sq);
+        var flip = Board.ComputeFlip(sq);
 
         if (flip == 0UL) throw new Exception("Invalid move");
 
