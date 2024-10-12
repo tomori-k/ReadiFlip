@@ -1,0 +1,248 @@
+@import '_content/Microsoft.FluentUI.AspNetCore.Components/Microsoft.FluentUI.AspNetCore.Components.yubuy4qy2m.bundle.scp.css';
+
+/* /Components/Board.razor.rz.scp.css */
+
+ul[b-d2wak8aaix] {
+    padding: 0;
+    margin: 0;
+}
+
+li[b-d2wak8aaix] {
+    list-style: none; /* 必要に応じてlistのデフォルトスタイルを除去 */
+}
+
+.container[b-d2wak8aaix] {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.board-container[b-d2wak8aaix] {
+    --square-size: 2rem;
+
+    display: grid;
+    grid-template-rows: auto auto;
+    grid-template-columns: 1fr auto auto 1fr;
+    padding: 0;
+/*    width: fit-content;*/
+}
+
+@media (min-width: 384px) {
+    .board-container[b-d2wak8aaix] {
+        --square-size: 2.5rem;
+    }
+}
+
+@media (min-width: 640px) {
+    .board-container[b-d2wak8aaix] {
+        --square-size: 4rem;
+    }
+}
+
+.board[b-d2wak8aaix] {
+    display: flex;
+    flex-wrap: wrap;
+    border: calc(var(--square-size) * 0.03) solid black;
+    border-bottom: none;
+    border-right: none;
+    grid-row: 2 / 3;
+    grid-column: 3 / 4;
+    width: calc(var(--square-size) * 8);
+}
+
+    .board > li[b-d2wak8aaix] {
+        position: relative;
+        flex-basis: 12.5%; /* 各 li の幅を12.5%に設定 */
+        box-sizing: border-box; /* パディングやボーダーを含めたサイズ調整 */
+        width: var(--square-size);
+        height: var(--square-size);
+        border: calc(var(--square-size) * 0.03) solid black;
+        border-top: none;
+        border-left: none;
+        background-color: #3b9c46;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #f2e19b;
+        font-size: calc(var(--square-size) * 0.5);
+    }
+
+        .board > li[b-d2wak8aaix]::after {
+            position: absolute;
+            content: "";
+            width: calc(var(--square-size) * 0.85);
+            height: calc(var(--square-size) * 0.85);
+            border-radius: 50%;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            margin: auto;
+        }
+
+        .board > li.black[b-d2wak8aaix]::after {
+            background-color: black;
+        }
+
+        .board > li.white[b-d2wak8aaix]::after {
+            border: 0.08rem solid black;
+            background-color: white;
+        }
+
+        .board > li.move[b-d2wak8aaix]::after {
+            width: calc(var(--square-size) * 0.4);
+            height: calc(var(--square-size) * 0.4);
+            background-color: white;
+            opacity: 30%;
+        }
+
+        .board > li.bestscore[b-d2wak8aaix] {
+            color: #8ee8e8;
+        }
+
+        .board > li:hover.move[b-d2wak8aaix]::after {
+            background-color: black;
+        }
+
+        .board > li:active.move[b-d2wak8aaix]::after {
+            background-color: black;
+            opacity: 50%;
+        }
+
+.row-header[b-d2wak8aaix] {
+    grid-row: 2 / 3;
+    grid-column: 2 / 3;
+    display: flex;
+    flex-direction: column;
+    padding-right: 0.3rem;
+}
+
+    .row-header > li[b-d2wak8aaix] {
+        flex-basis: 12.5%; /* 各 li の幅を12.5%に設定 */
+        box-sizing: border-box; /* パディングやボーダーを含めたサイズ調整 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1.0;
+    }
+
+.col-header[b-d2wak8aaix] {
+    grid-row: 1 / 2;
+    grid-column: 3 / 4;
+    display: flex;
+    padding-bottom: 0.3rem;
+    width: calc(var(--square-size) * 8);
+}
+
+    .col-header > li[b-d2wak8aaix] {
+        flex-basis: 12.5%; /* 各 li の幅を12.5%に設定 */
+        box-sizing: border-box; /* パディングやボーダーを含めたサイズ調整 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1.0;
+    }
+
+.player[b-d2wak8aaix] {
+    text-align: center;
+}
+
+[b-d2wak8aaix] > .board-text {
+    width: 100%;
+}
+/* /Layout/MainLayout.razor.rz.scp.css */
+.page[b-md58wkzp68] {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+main[b-md58wkzp68] {
+    flex: 1;
+}
+
+.sidebar[b-md58wkzp68] {
+    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+}
+
+.top-row[b-md58wkzp68] {
+    background-color: #f7f7f7;
+    border-bottom: 1px solid #d6d5d5;
+    justify-content: flex-end;
+    height: 3.5rem;
+    display: flex;
+    align-items: center;
+}
+
+    .top-row[b-md58wkzp68]  a, .top-row[b-md58wkzp68]  .btn-link {
+        white-space: nowrap;
+        margin-left: 1.5rem;
+        text-decoration: none;
+    }
+
+    .top-row[b-md58wkzp68]  a:hover, .top-row[b-md58wkzp68]  .btn-link:hover {
+        text-decoration: underline;
+    }
+
+    .top-row[b-md58wkzp68]  a:first-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+@media (max-width: 640.98px) {
+    .top-row[b-md58wkzp68] {
+        justify-content: space-between;
+    }
+
+    .top-row[b-md58wkzp68]  a, .top-row[b-md58wkzp68]  .btn-link {
+        margin-left: 0;
+    }
+}
+
+@media (min-width: 641px) {
+    .page[b-md58wkzp68] {
+        flex-direction: row;
+    }
+
+    .sidebar[b-md58wkzp68] {
+        width: 250px;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+    }
+
+    .top-row[b-md58wkzp68] {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .top-row.auth[b-md58wkzp68]  a:first-child {
+        flex: 1;
+        text-align: right;
+        width: 0;
+    }
+
+    .top-row[b-md58wkzp68], article[b-md58wkzp68] {
+        padding-left: 2rem !important;
+        padding-right: 1.5rem !important;
+    }
+}
+/* /Pages/Home.razor.rz.scp.css */
+.container[b-kyq4gjraew] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    padding: 0.7rem;
+}
+
+.buttons[b-kyq4gjraew] {
+    display: flex;
+    justify-content: center;
+}
+
+.answer-container[b-kyq4gjraew] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
