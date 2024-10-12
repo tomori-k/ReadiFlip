@@ -5,62 +5,73 @@
 @using Color = ReadiFlip.Reversi.Color;
 @inject HttpClient Http
 
-<Board BoardParam="@board" Player="@player" ShowMoves="true" Scores="scores" OnSquareClicked="@OnSquareClicked"/>
+<div class="container">
+    <Board BoardParam="@board" Player="@player" ShowMoves="true" Scores="scores" OnSquareClicked="@OnSquareClicked"/>
 
-@if (generator != null)
-{
-    <FluentButton Appearance="Appearance.Accent" @onclick="GenerateNew">
-        生成
-    </FluentButton>
-    <FluentAccordion>
-        <FluentAccordionItem Heading="生成パラメータ">
-            <FluentEditForm Model="@GenParam">
-                <DataAnnotationsValidator />
-                <FluentValidationSummary />
-                <FluentStack Orientation="Orientation.Vertical">
-                    <div>
-                        <FluentNumberField Name="Delta1" @bind-Value="GenParam.D1" Label="許容誤差（1手読み）: 1手読みで互角っぽい手を列挙するのに使用します。" Required />
-                        <FluentValidationMessage For="@(() => GenParam.D1)" />
-                    </div>
-                    <div>
-                        <FluentNumberField Name="Delta2" @bind-Value="GenParam.D2" Label="許容誤差（3手読み）: 3手読み時に互角かそうでないかを判定するのに使用します。" Required />
-                        <FluentValidationMessage For="@(() => GenParam.D2)" />
-                    </div>
-                    <div>
-                        <FluentNumberField Name="MinPly" @bind-Value="GenParam.MinPly" Label="最小手数" Required />
-                        <FluentValidationMessage For="@(() => GenParam.MinPly)" />
-                    </div>
-                    <div>
-                        <FluentNumberField Name="MaxPly" @bind-Value="GenParam.MaxPly" Label="最大手数" Required />
-                        <FluentValidationMessage For="@(() => GenParam.MaxPly)" />
-                    </div>
-                    <div>
-                        <FluentNumberField Name="Trial" @bind-Value="GenParam.Trial" Label="生成ループ数" Required />
-                        <FluentValidationMessage For="@(() => GenParam.Trial)" />
-                    </div>
-                </FluentStack>
-            </FluentEditForm>
-        </FluentAccordionItem>
-    </FluentAccordion>
-}
+    @if (generator != null)
+    {
+        <div class="buttons">
+            <FluentButton Appearance="Appearance.Accent" @onclick="GenerateNew">
+                生成
+            </FluentButton>
+        </div>
+    }
 
-@if (showAnswer && answer != null)
-{
-    <FluentCard>
-        <FluentLabel Typo="Typography.Body">
-            @(isCorrect ? "\u2b55正解！" : "\u274c不正解:(")
-        </FluentLabel>
-        <FluentLabel Typo="Typography.Body">
-            答え: @answer
-        </FluentLabel>
+    @if (showAnswer && answer != null)
+    {
+        <FluentCard>
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentLabel Typo="Typography.Body">
+                    @(isCorrect ? "\u2b55正解！" : "\u274c不正解:(")
+                </FluentLabel>
+                <FluentLabel Typo="Typography.Body">
+                    答え: @answer
+                </FluentLabel>
+                <FluentDataGrid Items="@candidates">
+                    <PropertyColumn Property="@(x => x.Score)" Sortable="true" InitialSortDirection="SortDirection.Descending" Title="評価値"/>
+                    <PropertyColumn Property="@(x => x.Move)" Sortable="false" Title="指し手"/>
+                    <PropertyColumn Property="@(x => string.Join("", x.Pv))" Sortable="false" Title="読み筋"/>
+                </FluentDataGrid>
+            </FluentStack>
+        </FluentCard>
+    }
 
-        <FluentDataGrid Items="@candidates">
-            <PropertyColumn Property="@(x => x.Score)" Sortable="true" InitialSortDirection="SortDirection.Descending" Title="評価値"/>
-            <PropertyColumn Property="@(x => x.Move)" Sortable="false" Title="指し手"/>
-            <PropertyColumn Property="@(x => string.Join("", x.Pv))" Sortable="false" Title="読み筋"/>
-        </FluentDataGrid>
-    </FluentCard>
-}
+    @if(generator != null)
+    {
+        <FluentAccordion>
+            <FluentAccordionItem Heading="生成パラメータ">
+                <FluentEditForm Model="@GenParam">
+                    <DataAnnotationsValidator />
+                    <FluentValidationSummary />
+                    <FluentStack Orientation="Orientation.Vertical">
+                        <div>
+                            <FluentNumberField Name="Delta1" @bind-Value="GenParam.D1" Label="許容誤差（1手読み）: 1手読みで互角っぽい手を列挙するのに使用します。" Required />
+                            <FluentValidationMessage For="@(() => GenParam.D1)" />
+                        </div>
+                        <div>
+                            <FluentNumberField Name="Delta2" @bind-Value="GenParam.D2" Label="許容誤差（3手読み）: 3手読み時に互角かそうでないかを判定するのに使用します。" Required />
+                            <FluentValidationMessage For="@(() => GenParam.D2)" />
+                        </div>
+                        <div>
+                            <FluentNumberField Name="MinPly" @bind-Value="GenParam.MinPly" Label="最小手数" Required />
+                            <FluentValidationMessage For="@(() => GenParam.MinPly)" />
+                        </div>
+                        <div>
+                            <FluentNumberField Name="MaxPly" @bind-Value="GenParam.MaxPly" Label="最大手数" Required />
+                            <FluentValidationMessage For="@(() => GenParam.MaxPly)" />
+                        </div>
+                        <div>
+                            <FluentNumberField Name="Trial" @bind-Value="GenParam.Trial" Label="生成ループ数" Required />
+                            <FluentValidationMessage For="@(() => GenParam.Trial)" />
+                        </div>
+                    </FluentStack>
+                </FluentEditForm>
+            </FluentAccordionItem>
+        </FluentAccordion>
+        <div style="height: 30rem;">
+        </div>
+    }
+</div>
 
 @code {
     Color? player;
