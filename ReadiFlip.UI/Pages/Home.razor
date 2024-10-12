@@ -20,7 +20,7 @@
     @if (showAnswer && answer != null)
     {
         <FluentCard>
-            <FluentStack Orientation="Orientation.Vertical">
+            <div class="answer-container">
                 <FluentLabel Typo="Typography.Body">
                     @(isCorrect ? "\u2b55正解！" : "\u274c不正解:(")
                 </FluentLabel>
@@ -32,7 +32,7 @@
                     <PropertyColumn Property="@(x => x.Move)" Sortable="false" Title="指し手"/>
                     <PropertyColumn Property="@(x => string.Join("", x.Pv))" Sortable="false" Title="読み筋"/>
                 </FluentDataGrid>
-            </FluentStack>
+            </div>
         </FluentCard>
     }
 

@@ -2,49 +2,52 @@
 @using BoardRecord = ReadiFlip.Reversi.Board;
 @using Color = ReadiFlip.Reversi.Color;
 
-@if(BoardParam != null && Player != null) {
-    var board = Player == Color.BLACK ? BoardParam : BoardParam.Inv;
+<div class="container">
+    @if(BoardParam != null && Player != null) {
+        var board = Player == Color.BLACK ? BoardParam : BoardParam.Inv;
 
-    <p class="player">@(Player == Color.BLACK ? "黒番" : "白番")</p>
-    <div class="container">
-        <ul class="row-header">
-            @foreach(var row in "12345678")
-            {
-                <li>@row</li>
-            }
-        </ul>
-        <ul class="col-header">
-            @foreach (var col in "ABCDEFGH")
-            {
-                <li>@col</li>
-            }
-        </ul>
-        <ul class="board">
-            @for (var i = 0; i < 64; ++i)
-            {
-                var sq = (Square)i;
-                var c = board[sq];
-                <li class="@(c == Color.BLACK ? "black"
-                           : c == Color.WHITE ? "white"
-                           : Scores != null && Scores.ContainsKey(sq) && Scores[sq] == Scores.MaxBy(t => t.Value).Value ? "bestscore"
-                           : Scores == null && ShowMoves && BoardParam.IsValidMove(sq) ? "move"
-                           : "")"
-                    @onclick="() => OnSquareClicked.InvokeAsync(sq)">
+        <p class="player">@(Player == Color.BLACK ? "黒番" : "白番")</p>
+        <div class="board-container">
+            <ul class="row-header">
+                @foreach(var row in "12345678")
+                {
+                    <li>@row</li>
+                }
+            </ul>
+            <ul class="col-header">
+                @foreach (var col in "ABCDEFGH")
+                {
+                    <li>@col</li>
+                }
+            </ul>
+            <ul class="board">
+                @for (var i = 0; i < 64; ++i)
+                {
+                    var sq = (Square)i;
+                    var c = board[sq];
+                    <li class="@(c == Color.BLACK ? "black"
+                               : c == Color.WHITE ? "white"
+                               : Scores != null && Scores.ContainsKey(sq) && Scores[sq] == Scores.MaxBy(t => t.Value).Value ? "bestscore"
+                               : Scores == null && ShowMoves && BoardParam.IsValidMove(sq) ? "move"
+                               : "")"
+                        @onclick="() => OnSquareClicked.InvokeAsync(sq)">
 
-                    @if (BoardParam.IsValidMove(sq) && (Scores?.ContainsKey(sq) ?? false))
-                    {
-                        <span>@(Scores[sq] > 0 ? "+" : "")@Scores[sq]</span>
-                    }
-                </li>
-            }
-        </ul>
-    </div>
-    <!--
-    <div>
-        <FluentTextField Class="board-text" ReadOnly="true" Value="@(new Reversi(BoardParam, Player.Value).ToString())" />
-    </div>
-    -->
-}
+                        @if (BoardParam.IsValidMove(sq) && (Scores?.ContainsKey(sq) ?? false))
+                        {
+                            <span>@(Scores[sq] > 0 ? "+" : "")@Scores[sq]</span>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+        <!--
+        <div>
+            <FluentTextField Class="board-text" ReadOnly="true" Value="@(new Reversi(BoardParam, Player.Value).ToString())" />
+        </div>
+        -->
+    }
+</div>
+
 
 @code {
     [Parameter]
