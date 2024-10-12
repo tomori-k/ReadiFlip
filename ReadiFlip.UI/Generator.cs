@@ -1,5 +1,6 @@
 ﻿using ReadiFlip.Edax;
 using ReadiFlip.Reversi;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 
 namespace ReadiFlip.Generator;
@@ -16,6 +17,24 @@ public record SearchResult(
     int Score,
     Square[] Pv
 );
+
+[RequiresUnreferencedCode("Necessary because of RangeAttribute usage")]
+public record Parameter
+{
+    [Range(0, 64, ErrorMessage = "D1 invalid (0-64)")]
+    public int D1 { get; set; } = 4;
+
+    [Range(0, 64, ErrorMessage = "D2 invalid (0-64)")]
+    public int D2 { get; set; } = 6;
+
+    [Range(0, 60, ErrorMessage = "Min ply invalid (0-60)")]
+    public int MinPly { get; set; } = 15;
+
+    [Range(0, 60, ErrorMessage = "Max ply invalid (0-60)")]
+    public int MaxPly { get; set; } = 50;
+
+    public int Trial { get; set; } = 10000;
+}
 
 public class Generator
 {
@@ -48,13 +67,13 @@ public class Generator
     /// <param name="trial"></param>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
-    public Puzzle Generate(int d1 = 4, int d2 = 6, int minPly = 15, int maxPly = 50, int trial = 10000)
+    public Puzzle Generate(Parameter param)
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(d1);
-        ArgumentOutOfRangeException.ThrowIfNegative(d2);
-        if (!(0 <= minPly && minPly <= 60)) throw new ArgumentOutOfRangeException();
+        ArgumentOutOfRangeException.ThrowIfNegative(param.D1);
+        ArgumentOutOfRangeException.ThrowIfNegative(param.D2);
+        if (!(0 <= param.MinPly && param.MinPly <= 60)) throw new ArgumentOutOfRangeException();
 
-        for (int i = 0; i < trial; ++i)
+        for (int i = 0; i < param.Trial; ++i)
         {
             var reversi = new Reversi.Reversi();
 
@@ -62,7 +81,7 @@ public class Generator
             {
                 var ply = 60 - reversi.Board.NumEmpties;
 
-                if (minPly <= ply && ply <= maxPly && IsGoodForPractice(reversi.Board, d1, d2, out var answer))
+                if (param.MinPly <= ply && ply <= param.MaxPly && IsGoodForPractice(reversi.Board, param.D1, param.D2, out var answer))
                 {
                     return new(reversi.Board, reversi.Color, answer.Value.Best, answer.Value.Others);
                 }

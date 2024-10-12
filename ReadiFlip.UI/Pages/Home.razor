@@ -12,6 +12,36 @@
     <FluentButton Appearance="Appearance.Accent" @onclick="GenerateNew">
         生成
     </FluentButton>
+    <FluentAccordion>
+        <FluentAccordionItem Heading="生成パラメータ">
+            <FluentEditForm Model="@GenParam">
+                <DataAnnotationsValidator />
+                <FluentValidationSummary />
+                <FluentStack Orientation="Orientation.Vertical">
+                    <div>
+                        <FluentNumberField Name="Delta1" @bind-Value="GenParam.D1" Label="許容誤差（1手読み）: 1手読みで互角っぽい手を列挙するのに使用します。" Required />
+                        <FluentValidationMessage For="@(() => GenParam.D1)" />
+                    </div>
+                    <div>
+                        <FluentNumberField Name="Delta2" @bind-Value="GenParam.D2" Label="許容誤差（3手読み）: 3手読み時に互角かそうでないかを判定するのに使用します。" Required />
+                        <FluentValidationMessage For="@(() => GenParam.D2)" />
+                    </div>
+                    <div>
+                        <FluentNumberField Name="MinPly" @bind-Value="GenParam.MinPly" Label="最小手数" Required />
+                        <FluentValidationMessage For="@(() => GenParam.MinPly)" />
+                    </div>
+                    <div>
+                        <FluentNumberField Name="MaxPly" @bind-Value="GenParam.MaxPly" Label="最大手数" Required />
+                        <FluentValidationMessage For="@(() => GenParam.MaxPly)" />
+                    </div>
+                    <div>
+                        <FluentNumberField Name="Trial" @bind-Value="GenParam.Trial" Label="生成ループ数" Required />
+                        <FluentValidationMessage For="@(() => GenParam.Trial)" />
+                    </div>
+                </FluentStack>
+            </FluentEditForm>
+        </FluentAccordionItem>
+    </FluentAccordion>
 }
 
 @if (showAnswer && answer != null)
@@ -43,6 +73,9 @@
 
     Generator? generator;
 
+    [SupplyParameterFromForm]
+    ReadiFlip.Generator.Parameter GenParam { get; set; } = new();
+
     protected override async Task OnInitializedAsync()
     {
         using var stream = await Http.GetStreamAsync("data/eval.dat");
@@ -61,7 +94,7 @@
     {
         showAnswer = false;
         scores = null;
-        var (board, color, bestMove, otherMoves) = generator!.Generate(minPly: 16, trial: 100);
+        var (board, color, bestMove, otherMoves) = generator!.Generate(GenParam);
         this.board = board;
         this.player = color;
         this.answer = bestMove.Move;
